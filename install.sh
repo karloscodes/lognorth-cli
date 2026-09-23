@@ -54,7 +54,7 @@ fi
 
 chmod +x "$tmp/$asset"
 mv "$tmp/$asset" "$dir/north"
-say "Installed north $("$dir/north" version) to $dir/north"
+say "Installed $("$dir/north" version) to $dir/north"
 
 case ":$PATH:" in
   *":$dir:"*) ;;
