@@ -64,7 +64,8 @@ func tail(args []string) error {
 		fmt.Fprintln(fs.Output(), "Usage: north tail [flags] [search]")
 		fs.PrintDefaults()
 	}
-	if err := fs.Parse(args); err != nil {
+	words, err := parseFlags(fs, args)
+	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
 		}
@@ -82,7 +83,7 @@ func tail(args []string) error {
 	}
 
 	t := &tailer{c: c, filter: map[string]any{}, colors: colorsFor(os.Stdout)}
-	if search := strings.TrimSpace(*path + " " + strings.Join(fs.Args(), " ")); search != "" {
+	if search := strings.TrimSpace(*path + " " + strings.Join(words, " ")); search != "" {
 		t.filter["search"] = search
 	}
 	if *errorsOnly {
@@ -102,7 +103,7 @@ func tail(args []string) error {
 		}
 	}
 
-	fmt.Fprintln(os.Stdout, t.colors.dim(fmt.Sprintf("tailing %s (from %s) · ctrl+c stops", r.URL, r.From)))
+	fmt.Fprintln(os.Stdout, t.colors.dim("tailing "+hostOf(r.URL)+fromShell(r)+" · ctrl+c stops"))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	return t.run(ctx, os.Stdout, *backlog, 2*time.Second)
@@ -276,6 +277,22 @@ func (t *tailer) format(e event) string {
 		}
 	}
 	return strings.Join(parts, "  ")
+}
+
+// parseFlags lets flags come before or after the other words, so
+// north tail /checkout --errors works like north tail --errors /checkout.
+func parseFlags(fs *flag.FlagSet, args []string) ([]string, error) {
+	var words []string
+	for {
+		if err := fs.Parse(args); err != nil {
+			return nil, err
+		}
+		if fs.NArg() == 0 {
+			return words, nil
+		}
+		words = append(words, fs.Arg(0))
+		args = fs.Args()[1:]
+	}
 }
 
 // fatal marks an error that retrying cannot fix.

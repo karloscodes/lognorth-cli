@@ -84,7 +84,7 @@ type snapshot struct {
 func top(args []string) error {
 	fs := flag.NewFlagSet("top", flag.ContinueOnError)
 	appName := fs.String("app", "", "start on this app, by name or id")
-	if err := fs.Parse(args); err != nil {
+	if _, err := parseFlags(fs, args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
 		}
@@ -100,7 +100,7 @@ func top(args []string) error {
 		return err
 	}
 	c := newClient(r)
-	st := topState{host: strings.TrimPrefix(strings.TrimPrefix(r.URL, "https://"), "http://")}
+	st := topState{host: hostOf(r.URL)}
 	if st.apps, err = c.apps(); err != nil {
 		return err
 	}

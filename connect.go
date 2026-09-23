@@ -48,7 +48,7 @@ func loadRemote() (remote, error) {
 	}
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return remote{}, errors.New("not connected yet. Run: north connect https://logs.yoursite.com lgn-agent-...")
+		return remote{}, errors.New("not connected yet. Run north connect: it asks for your LogNorth URL and agent key")
 	}
 	if err != nil {
 		return remote{}, err
@@ -59,6 +59,19 @@ func loadRemote() (remote, error) {
 	}
 	r.From = path
 	return r, nil
+}
+
+// hostOf is the URL without its scheme: logs.yoursite.com.
+func hostOf(url string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(url, "https://"), "http://")
+}
+
+// fromShell says so when the environment, not north connect, chose the server.
+func fromShell(r remote) string {
+	if r.From == "LOGNORTH_URL" {
+		return " (from LOGNORTH_URL in your shell)"
+	}
+	return ""
 }
 
 func fromEnv() bool {
@@ -98,8 +111,9 @@ func connect(args []string) error {
 	if len(args) > 2 {
 		return errors.New("usage: north connect [url] [agent key]")
 	}
+	current, _ := loadRemote() // offered as the default URL
 	for len(args) < 2 {
-		answer, err := ask(len(args))
+		answer, err := ask(len(args), current.URL)
 		if err != nil {
 			return err
 		}
@@ -126,8 +140,8 @@ func connect(args []string) error {
 	for i, a := range apps {
 		names[i] = a.Name
 	}
-	fmt.Printf("Connected to %s. %d app(s): %s\n", r.URL, len(apps), strings.Join(names, ", "))
-	fmt.Printf("Saved to %s. Now try: north tail, or north top\n", path)
+	fmt.Printf("Connected to %s. Apps: %s.\n", hostOf(r.URL), strings.Join(names, ", "))
+	fmt.Printf("Saved to %s. Now run: north tail, or north top\n", path)
 	if fromEnv() && normalizeURL(os.Getenv("LOGNORTH_URL")) != r.URL {
 		fmt.Printf("Note: LOGNORTH_URL in your shell points at %s, and it wins over this file. Unset it to read %s.\n",
 			normalizeURL(os.Getenv("LOGNORTH_URL")), r.URL)
@@ -135,16 +149,24 @@ func connect(args []string) error {
 	return nil
 }
 
-// ask prompts for the URL (step 0) or the agent key (step 1).
-func ask(step int) (string, error) {
+// ask prompts for the URL (step 0) or the agent key (step 1). An empty URL
+// answer keeps the server you are connected to.
+func ask(step int, currentURL string) (string, error) {
 	in := int(os.Stdin.Fd())
 	if !term.IsTerminal(in) {
 		return "", errors.New("usage: north connect <url> <agent key>. The agent key is in LogNorth under Settings > Developer")
 	}
 	if step == 0 {
-		fmt.Print("LogNorth URL (https://logs.yoursite.com): ")
+		if currentURL != "" {
+			fmt.Printf("LogNorth URL [%s]: ", currentURL)
+		} else {
+			fmt.Print("LogNorth URL (https://logs.yoursite.com): ")
+		}
 		line, err := bufio.NewReader(os.Stdin).ReadString('\n')
-		return strings.TrimSpace(line), err
+		if answer := strings.TrimSpace(line); answer != "" || currentURL == "" {
+			return answer, err
+		}
+		return currentURL, err
 	}
 	fmt.Print("Agent key, from Settings > Developer (hidden): ")
 	key, err := term.ReadPassword(in)

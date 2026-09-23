@@ -11,8 +11,8 @@ var version = "dev"
 
 func main() {
 	if len(os.Args) < 2 {
-		usage()
-		os.Exit(1)
+		status()
+		return
 	}
 
 	var err error
@@ -24,14 +24,17 @@ func main() {
 	case "top":
 		err = top(os.Args[2:])
 	case "version", "--version", "-v":
-		fmt.Println(version)
+		fmt.Println("north", version)
 		return
 	case "help", "--help", "-h":
 		usage()
 		return
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", os.Args[1])
-		usage()
+		fmt.Fprintf(os.Stderr, "north: no command %q.", os.Args[1])
+		if near := closest(os.Args[1]); near != "" {
+			fmt.Fprintf(os.Stderr, " Did you mean north %s?", near)
+		}
+		fmt.Fprintln(os.Stderr, " Run north help for the list.")
 		os.Exit(1)
 	}
 
@@ -39,6 +42,54 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// status is what a bare north prints: where it reads from, and what to run.
+func status() {
+	fmt.Printf("north %s: your LogNorth server, in the terminal\n\n", version)
+	if r, err := loadRemote(); err == nil {
+		fmt.Printf("Reading %s%s.\n\n", hostOf(r.URL), fromShell(r))
+	} else {
+		fmt.Print("Not connected yet. Start with: north connect\n\n")
+	}
+	fmt.Println("  north tail            follow the log (--errors, --path /checkout, --app name)")
+	fmt.Println("  north top             endpoints, alerts, and uptime, live")
+	fmt.Println("  north connect         read another server")
+	fmt.Println("  north help            everything else")
+}
+
+var commands = []string{"connect", "tail", "top", "version", "help"}
+
+// closest finds the command a typo meant: at most 2 letters off.
+func closest(typed string) string {
+	best, bestDist := "", 3
+	for _, c := range commands {
+		if d := distance(typed, c); d < bestDist {
+			best, bestDist = c, d
+		}
+	}
+	return best
+}
+
+// distance is the Levenshtein edit distance between two short words.
+func distance(a, b string) int {
+	prev := make([]int, len(b)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		cur := make([]int, len(b)+1)
+		cur[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			cur[j] = min(prev[j]+1, cur[j-1]+1, prev[j-1]+cost)
+		}
+		prev = cur
+	}
+	return prev[len(b)]
 }
 
 func usage() {

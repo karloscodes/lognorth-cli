@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -357,6 +358,30 @@ func TestTop(t *testing.T) {
 				if n := utf8.RuneCountInString(l); n > size[0] {
 					t.Errorf("%dx%d: a line is %d wide: %q", size[0], size[1], n, l)
 				}
+			}
+		}
+	})
+}
+
+func TestCommandLine(t *testing.T) {
+	t.Run("flags work before or after the search words", func(t *testing.T) {
+		for _, args := range [][]string{{"--errors", "/checkout"}, {"/checkout", "--errors"}, {"/checkout", "-n", "5", "--errors"}} {
+			fs := flag.NewFlagSet("tail", flag.ContinueOnError)
+			errorsOnly := fs.Bool("errors", false, "")
+			fs.Int("n", 20, "")
+
+			words, err := parseFlags(fs, args)
+
+			if err != nil || !*errorsOnly || strings.Join(words, " ") != "/checkout" {
+				t.Errorf("%v: errors=%v words=%q err=%v, want errors on and the search /checkout", args, *errorsOnly, words, err)
+			}
+		}
+	})
+
+	t.Run("a typo suggests the command it meant", func(t *testing.T) {
+		for typed, want := range map[string]string{"tial": "tail", "tpo": "top", "conect": "connect", "deploy": ""} {
+			if got := closest(typed); got != want {
+				t.Errorf("closest(%q) = %q, want %q", typed, got, want)
 			}
 		}
 	})
