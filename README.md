@@ -16,11 +16,12 @@ north top                      # j/k move, enter shows errors, w window, q quit
 
 ## Your coding agent
 
-`north connect` also offers to add LogNorth to Claude Code, Codex, and Gemini CLI, through their plugin commands. Each agent then starts `north mcp`, which relays its MCP calls to your server. The URL and key stay in `~/.config/lognorth/remote.json`, readable by you only, and never go into an agent config. Run `north agents` to add an agent you installed later.
+`north connect` also offers to add LogNorth to Claude Code, Codex, and Gemini CLI through their plugin commands, and to Cursor through `~/.cursor/mcp.json`. Each agent then starts `north mcp`, which relays its MCP calls to your server. The URL and key stay in `~/.config/lognorth/remote.json`, readable by you only, and never go into an agent config. Run `north agents` to add an agent you installed later.
 
 ```bash
 north agents                   # add LogNorth to the agents on this machine
 north call list_alerts         # run one tool, print its JSON
+north update                   # update north to the latest release
 ```
 
 `north` reads the same read-only MCP tools your coding agent reads, with the same agent key, so it can look but never touch. It needs LogNorth v0.20.0 or later on the server.

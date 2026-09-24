@@ -25,6 +25,8 @@ func main() {
 		err = top(os.Args[2:])
 	case "agents":
 		err = agentsCommand(os.Args[2:])
+	case "update":
+		err = update(os.Args[2:])
 	case "mcp":
 		err = serveMCP(os.Stdin, os.Stdout)
 	case "call":
@@ -62,10 +64,11 @@ func status() {
 	fmt.Println("  north top             endpoints, alerts, and uptime, live")
 	fmt.Println("  north connect         read another server")
 	fmt.Println("  north agents          add LogNorth to your coding agents")
+	fmt.Println("  north update          update north")
 	fmt.Println("  north help            everything else")
 }
 
-var commands = []string{"connect", "agents", "tail", "top", "mcp", "call", "version", "help"}
+var commands = []string{"connect", "agents", "update", "tail", "top", "mcp", "call", "version", "help"}
 
 // closest finds the command a typo meant: at most 2 letters off.
 func closest(typed string) string {
@@ -103,11 +106,12 @@ func usage() {
 	fmt.Println("Usage: north <command>")
 	fmt.Println()
 	fmt.Println("  connect [url] [agent key]  Save where to read from; asks for what you leave out")
-	fmt.Println("  agents                     Add LogNorth to Claude Code, Codex, and Gemini CLI")
+	fmt.Println("  agents                     Add LogNorth to Claude Code, Codex, Gemini CLI, and Cursor")
 	fmt.Println("  tail [flags] [search]      Follow the log: --errors, --path /checkout, --app name, -n 20")
 	fmt.Println("  top [--app name]           Endpoints, alerts, and uptime, live")
 	fmt.Println("  mcp                        Relay agent MCP calls to the server, over stdin/stdout")
 	fmt.Println("  call <tool> [json]         Run one MCP tool and print its JSON answer")
+	fmt.Println("  update                     Update north to the latest release")
 	fmt.Println("  version                    Show the version")
 	fmt.Println()
 	fmt.Println("The agent key is in LogNorth under Settings > Developer. Docs: https://lognorth.com/docs/features/terminal/")
