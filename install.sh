@@ -4,7 +4,8 @@
 #   curl -fsSL https://lognorth.com/cli | sh
 #   curl -fsSL https://lognorth.com/cli | sh -s -- https://logs.yoursite.com lgn-agent-...
 #
-# Then it runs north connect, which asks for what the arguments leave out. It installs to
+# Then it runs north connect, which asks for what the arguments leave out and
+# adds LogNorth to the coding agents it finds. It installs to
 # /usr/local/bin when it can write there, otherwise to ~/.local/bin. No sudo.
 # Source: https://github.com/karloscodes/lognorth-cli
 # Set LOGNORTH_BIN_DIR to choose the folder yourself.
@@ -61,14 +62,14 @@ case ":$PATH:" in
   *) say "Add $dir to your PATH: echo 'export PATH=\"$dir:\$PATH\"' >> ~/.$(basename "${SHELL:-sh}")rc" ;;
 esac
 
-# Connect now. curl holds stdin, so the questions read the terminal directly.
-if [ "$#" -ge 2 ]; then
-  "$dir/north" connect "$1" "$2"
-elif (exec </dev/tty) 2>/dev/null; then
-  say ""
+# Connect now. curl holds stdin, so north reads the terminal directly: it asks
+# for what the arguments leave out, then offers to add LogNorth to your agents.
+say ""
+if (exec </dev/tty) 2>/dev/null; then
   "$dir/north" connect "$@" </dev/tty || say "Connect later with: north connect"
+elif [ "$#" -ge 2 ]; then
+  "$dir/north" connect "$1" "$2"
 else
-  say ""
   say "Next: north connect https://logs.yoursite.com lgn-agent-..."
   say "The agent key is in LogNorth under Settings > Developer."
 fi

@@ -35,19 +35,19 @@ func remotePath() (string, error) {
 	return filepath.Join(dir, "lognorth", "remote.json"), nil
 }
 
-// loadRemote reads LOGNORTH_URL and LOGNORTH_AGENT_KEY first, the same
-// variables the agent plugin uses, then the file north connect saved.
+// loadRemote reads the file north connect saved, then LOGNORTH_URL and
+// LOGNORTH_AGENT_KEY. The file wins: it is what you chose, while a variable
+// can linger in a shell or a long-running agent after its key was replaced.
 func loadRemote() (remote, error) {
-	if fromEnv() {
-		return remote{URL: normalizeURL(os.Getenv("LOGNORTH_URL")), Key: os.Getenv("LOGNORTH_AGENT_KEY"), From: "LOGNORTH_URL"}, nil
-	}
-
 	path, err := remotePath()
 	if err != nil {
 		return remote{}, err
 	}
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
+		if fromEnv() {
+			return remote{URL: normalizeURL(os.Getenv("LOGNORTH_URL")), Key: os.Getenv("LOGNORTH_AGENT_KEY"), From: "LOGNORTH_URL"}, nil
+		}
 		return remote{}, errors.New("not connected yet. Run north connect: it asks for your LogNorth URL and agent key")
 	}
 	if err != nil {
@@ -140,13 +140,23 @@ func connect(args []string) error {
 	for i, a := range apps {
 		names[i] = a.Name
 	}
-	fmt.Printf("Connected to %s. Apps: %s.\n", hostOf(r.URL), strings.Join(names, ", "))
-	fmt.Printf("Saved to %s. Now run: north tail, or north top\n", path)
-	if fromEnv() && normalizeURL(os.Getenv("LOGNORTH_URL")) != r.URL {
-		fmt.Printf("Note: LOGNORTH_URL in your shell points at %s, and it wins over this file. Unset it to read %s.\n",
-			normalizeURL(os.Getenv("LOGNORTH_URL")), r.URL)
+	p := colorsFor(os.Stdout)
+	fmt.Printf("%s Connected to %s: %s\n", p.lime("✓"), p.bold(hostOf(r.URL)), strings.Join(names, ", "))
+	fmt.Println(p.dim("  Saved to " + tildePath(path) + ", readable by you only"))
+	fmt.Println()
+	if err := setupAgents(true); err != nil {
+		return err
 	}
+	fmt.Println(p.dim("In the terminal: north tail follows the log, north top shows one app live."))
 	return nil
+}
+
+// tildePath shows a path under your home as ~/...
+func tildePath(path string) string {
+	if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(path, home+"/") {
+		return "~" + strings.TrimPrefix(path, home)
+	}
+	return path
 }
 
 // ask prompts for the URL (step 0) or the agent key (step 1). An empty URL
