@@ -103,7 +103,7 @@ func usage() {
 	fmt.Println("Usage: north <command>")
 	fmt.Println()
 	fmt.Println("  connect [url] [agent key]  Save where to read from; asks for what you leave out")
-	fmt.Println("  agents                     Add LogNorth to Claude Code, Codex, Gemini CLI, and Cursor")
+	fmt.Println("  agents                     Add LogNorth to Claude Code, Codex, and Gemini CLI")
 	fmt.Println("  tail [flags] [search]      Follow the log: --errors, --path /checkout, --app name, -n 20")
 	fmt.Println("  top [--app name]           Endpoints, alerts, and uptime, live")
 	fmt.Println("  mcp                        Relay agent MCP calls to the server, over stdin/stdout")

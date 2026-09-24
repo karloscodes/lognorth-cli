@@ -3,12 +3,10 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -33,7 +31,6 @@ var agents = []agent{
 	{"Claude Code", onPath("claude"), addToClaude},
 	{"Codex", onPath("codex"), addToCodex},
 	{"Gemini CLI", onPath("gemini"), addToGemini},
-	{"Cursor", cursorFound, addToCursor},
 }
 
 func onPath(name string) func() bool {
@@ -69,60 +66,6 @@ func addToGemini() (string, error) {
 		err = run("gemini", "extensions", "update", "lognorth")
 	}
 	return "extension lognorth", err
-}
-
-// Cursor has no plugin command yet, so north adds itself to ~/.cursor/mcp.json.
-func cursorFound() bool {
-	home, _ := os.UserHomeDir()
-	_, err := os.Stat(filepath.Join(home, ".cursor"))
-	return err == nil
-}
-
-func addToCursor() (string, error) {
-	home, _ := os.UserHomeDir()
-	path := filepath.Join(home, ".cursor", "mcp.json")
-	return "~/.cursor/mcp.json", addMCPServer(path)
-}
-
-// addMCPServer adds north mcp to an mcp.json and keeps every other entry.
-func addMCPServer(path string) error {
-	config := map[string]json.RawMessage{}
-	data, err := os.ReadFile(path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	if len(strings.TrimSpace(string(data))) > 0 {
-		if err := json.Unmarshal(data, &config); err != nil {
-			return fmt.Errorf("could not read %s: %w", path, err)
-		}
-	}
-	servers := map[string]json.RawMessage{}
-	if raw, ok := config["mcpServers"]; ok {
-		if err := json.Unmarshal(raw, &servers); err != nil {
-			return fmt.Errorf("could not read mcpServers in %s: %w", path, err)
-		}
-	}
-
-	// The full path: an editor started from the Dock does not read your
-	// shell's PATH, so a bare north may not resolve there.
-	servers["lognorth"], _ = json.Marshal(map[string]any{"command": northPath(), "args": []string{"mcp"}})
-	config["mcpServers"], _ = json.Marshal(servers)
-
-	out, _ := json.MarshalIndent(config, "", "  ")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, append(out, '\n'), 0o644)
-}
-
-func northPath() string {
-	if exe, err := os.Executable(); err == nil {
-		if resolved, err := filepath.EvalSymlinks(exe); err == nil {
-			return resolved
-		}
-		return exe
-	}
-	return "north"
 }
 
 func runAll(commands ...[]string) error {
@@ -168,7 +111,7 @@ func setupAgents(ask bool) error {
 		}
 	}
 	if len(found) == 0 {
-		fmt.Println("No coding agent found. North works with Claude Code, Codex, Gemini CLI, and Cursor.")
+		fmt.Println("No coding agent found. North works with Claude Code, Codex, and Gemini CLI.")
 		return nil
 	}
 
