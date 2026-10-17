@@ -1,6 +1,6 @@
 module github.com/karloscodes/lognorth-cli
 
-go 1.25.0
+go 1.27.2
 
 require golang.org/x/term v0.45.0
 
