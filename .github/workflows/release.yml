@@ -1,5 +1,5 @@
-# A tag v* makes a release: north for macOS and Linux, and checksums.txt.
-# install.sh and north update download north-<os>-<arch>. Those names stay.
+# A tag v* makes a release: the CLI for macOS and Linux, and checksums.txt.
+# This file is the same in chasen and suppyhq-cli; only the binary name differs.
 #
 # Built from the tag, outside this checkout, with the Go version in go.mod.
 # The job fails if the worktree is dirty, if a binary was built with another
@@ -42,11 +42,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: The checkout is the tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: test "$(git rev-list -n 1 "$GITHUB_REF_NAME")" = "$(git rev-parse HEAD)"
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/*) ;;
+            *) echo "GITHUB_REF is $GITHUB_REF, not refs/tags/*"; exit 1 ;;
+          esac
+          test "$(git rev-list -n 1 "refs/tags/$GITHUB_REF_NAME")" = "$(git rev-parse HEAD)"
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+          cache: false
       - name: Build
         env:
           CGO_ENABLED: "0"
@@ -59,6 +64,10 @@ jobs:
           out="${RUNNER_TEMP}/dist"
           mkdir -p "$out"
           test -z "$(git status --porcelain)"
+          case "$GITHUB_REF" in
+            refs/tags/*) ;;
+            *) echo "GITHUB_REF is $GITHUB_REF, not refs/tags/*"; exit 1 ;;
+          esac
           for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
             GOOS=${target%/*} GOARCH=${target#*/} go build -ldflags "$flags" -o "$out/north-${target%/*}-${target#*/}" .
           done
@@ -77,12 +86,10 @@ jobs:
                 *"${tab}build${tab}vcs.modified=false"*) ;;
                 *) echo "$bin was built from a modified checkout"; printf '%s\n' "$info"; exit 1 ;;
               esac
-              if [ "$GITHUB_REF" != "${GITHUB_REF#refs/tags/}" ]; then
-                case "$info" in
-                  *"${tab}mod${tab}github.com/karloscodes/lognorth-cli${tab}${GITHUB_REF_NAME}${tab}"*) ;;
-                  *) echo "$bin is not the module version $GITHUB_REF_NAME"; printf '%s\n' "$info"; exit 1 ;;
-                esac
-              fi
+              case "$info" in
+                *"${tab}mod${tab}github.com/karloscodes/lognorth-cli${tab}${GITHUB_REF_NAME}${tab}"*) ;;
+                *) echo "$bin is not the module version $GITHUB_REF_NAME"; printf '%s\n' "$info"; exit 1 ;;
+              esac
             done
             got="$(./north-linux-amd64 version)"
             want_ver="north ${GITHUB_REF_NAME#v}"
@@ -95,4 +102,4 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/dist/* --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/dist/* --title "$GITHUB_REF_NAME"
