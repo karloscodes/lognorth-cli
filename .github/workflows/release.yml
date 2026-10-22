@@ -64,6 +64,7 @@ jobs:
           out="${RUNNER_TEMP}/dist"
           mkdir -p "$out"
           test -z "$(git status --porcelain)"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           case "$GITHUB_REF" in
             refs/tags/*) ;;
             *) echo "GITHUB_REF is $GITHUB_REF, not refs/tags/*"; exit 1 ;;
@@ -102,4 +103,4 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/dist/* --title "$GITHUB_REF_NAME"
+        run: gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/dist/* --title "$GITHUB_REF_NAME" --verify-tag
