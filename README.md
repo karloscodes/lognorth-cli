@@ -1,42 +1,52 @@
 # north
 
-Your [LogNorth](https://lognorth.com) server, in your terminal. `north tail` follows the production log. `north top` is htop for your app: its endpoints, the alerts firing now, and the uptime ping.
+[![CI](https://github.com/karloscodes/lognorth-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/karloscodes/lognorth-cli/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/karloscodes/lognorth-cli)](https://github.com/karloscodes/lognorth-cli/releases/latest) [![License](https://img.shields.io/github/license/karloscodes/lognorth-cli)](LICENSE)
+
+The [LogNorth](https://lognorth.com) CLI: your LogNorth server, in your terminal. `north tail` follows the production log. `north top` is htop for your app: its endpoints, the alerts firing now, and the uptime ping.
+
+## Install
 
 ```bash
 curl -fsSL https://lognorth.com/cli | sh
 ```
 
-It picks the build for your Mac or Linux machine, checks it against the release checksum, installs `north` without sudo, and asks for your LogNorth URL and an agent key from **Settings > Developer**.
+The installer picks the build for your Mac or Linux machine and checks it against the release checksum. It installs `north` without sudo. Then it asks for your LogNorth URL and an agent key from **Settings > Developer**.
+
+## Use
 
 ```bash
 north tail --errors            # failures, live
 north tail --path /checkout    # one endpoint
-north top                      # j/k move, enter shows errors, w window, q quit
+north tail --app name          # one app, by name or id
+north top                      # j/k move, enter shows errors, w changes the window, q quits
+north top --app name           # start on one app
 ```
 
-## Your coding agent
+## Coding agents
 
-`north connect` also offers to add LogNorth to Claude Code, Codex, and Gemini CLI through their plugin commands, and to Cursor through `~/.cursor/mcp.json`. Each agent then starts `north mcp`, which relays its MCP calls to your server. The URL and key stay in `~/.config/lognorth/remote.json`, readable by you only, and never go into an agent config. Run `north agents` to add an agent you installed later.
+`north connect` adds LogNorth to the coding agents it finds: Claude Code, Codex, Gemini CLI, and Cursor. Each agent starts `north mcp`, which relays its calls to your server. The URL and key stay in `~/.config/lognorth/remote.json`, readable only by you. They never go into an agent config.
 
 ```bash
 north agents                   # add LogNorth to the agents on this machine
-north call list_alerts         # run one tool, print its JSON
+north call list_alerts         # run one tool and print its JSON
 north update                   # update north to the latest release
 ```
 
-`north` reads the same read-only MCP tools your coding agent reads, with the same agent key, so it can look but never touch. It needs LogNorth v0.20.0 or later on the server.
+`north` uses the same read-only MCP tools as your coding agent, with the same agent key. It reads data and never changes it. It needs LogNorth v0.20.0 or later on the server.
 
 Full docs: [lognorth.com/docs/features/terminal](https://lognorth.com/docs/features/terminal/)
 
-## Build
+## Development
 
 ```bash
 go test ./...
 go build -o north .
 ```
 
-Tagging `v*` releases `north-<os>-<arch>` binaries and `checksums.txt` through GitHub Actions.
+## Releases
+
+A tag `v*` starts a release. GitHub Actions builds `north-<os>-<arch>` binaries and `checksums.txt`.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
